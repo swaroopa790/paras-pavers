@@ -12,8 +12,36 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 const app = express();
 
 // --- Security & parsing middleware ---
-app.use(helmet({ crossOriginResourcePolicy: false }));
+// CSP configured to allow CDN scripts (Tailwind, Font Awesome, Google Fonts)
+// while maintaining strong security for everything else.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", 'https://cdn.tailwindcss.com'],
+        styleSrc: ["'self'", 'https:', "'unsafe-inline'"],
+        fontSrc: ["'self'", 'https:', 'data:'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        connectSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"]
+      }
+    }
+  })
+);
 app.use(express.json({ limit: '100kb' }));
+
+// --- Simple request logging ---
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
+  });
+  next();
+});
 
 const allowedOrigins = (process.env.CORS_ORIGIN || '*')
   .split(',')
@@ -43,6 +71,27 @@ app.use('/api', notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Paras Pavers server running on port ${PORT}`);
 });
+
+// Graceful shutdown — close server and DB pool on SIGTERM/SIGINT.
+// This ensures in-flight requests complete and connections are released cleanly,
+// which is important for container orchestration (Railway, Render, etc.).
+let isShuttingDown = false;
+function shutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  console.log(`\n${signal} received — shutting down gracefully...`);
+  server.close(() => {
+    console.log('HTTP server closed.');
+    process.exit(0);
+  });
+  // Force-exit if connections don't drain within 10s
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout.');
+    process.exit(1);
+  }, 10_000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

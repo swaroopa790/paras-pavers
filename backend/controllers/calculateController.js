@@ -16,21 +16,22 @@ async function calculate(req, res, next) {
       depth: depth !== undefined && depth !== '' ? Number(depth) : undefined
     });
 
-    // Persist the calculation (best-effort — don't fail the response if this errors)
+    // Persist the calculation (best-effort — don't fail the response if this errors).
+    // Use numeric values (not raw req.body strings) for DECIMAL columns.
     try {
       await pool.query(
         `INSERT INTO quantity_calculations
          (product_id, length, width, unit, block_length, block_width, wastage, depth, land_area, estimated_blocks, estimated_brass)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          productId || null,
-          length,
-          width,
+          productId ? Number(productId) : null,
+          Number(length),
+          Number(width),
           unit,
-          blockLength,
-          blockWidth,
-          wastage || 0,
-          depth || null,
+          Number(blockLength),
+          Number(blockWidth),
+          wastage !== undefined ? Number(wastage) : 0,
+          depth !== undefined && depth !== '' ? Number(depth) : null,
           result.landAreaSqFt,
           result.recommendedBlocks,
           result.estimatedBrass

@@ -5,7 +5,9 @@
   "description": "Paras Pavers — full-stack site (frontend + Express/MySQL backend)",
   "scripts": {
     "start": "node backend/server.js",
-    "dev": "node --watch backend/server.js"
+    "dev": "node --watch backend/server.js",
+    "build": "node backend/utils/calculate.test.js && echo 'Build verification passed'",
+    "test": "node backend/utils/calculate.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

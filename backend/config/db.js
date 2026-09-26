@@ -15,4 +15,10 @@ const pool = mysql.createPool({
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined
 });
 
+// Handle pool-level errors (e.g. MySQL server restart, network issues).
+// Without this, an unhandled 'error' event on the pool would crash the process.
+pool.on('error', (err) => {
+  console.error('[DB] Pool error:', err.message);
+});
+
 module.exports = pool;
