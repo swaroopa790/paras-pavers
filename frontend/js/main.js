@@ -73,9 +73,11 @@
       const card = document.createElement('div');
       card.className = 'product-card';
       card.innerHTML = `
-        <img src="${escapeAttr(p.image_url || '')}" alt="${escapeAttr(p.name)}"
-             style="width:100%;height:auto;" class="h-60 w-full object-cover"
-             onerror="this.onerror=null;this.src='https://placehold.co/400x300/0f172a/c9a24d?text=${encodeURIComponent(p.name)}';">
+        <div class="img-container">
+          <img src="${escapeAttr(p.image_url || '')}" alt="${escapeAttr(p.name)}"
+               class="product-image"
+               onerror="this.onerror=null;this.src='https://placehold.co/400x300/0f172a/c9a24d?text=${encodeURIComponent(p.name)}';">
+        </div>
         <div class="p-5">
             <h4 class="heading-font text-lg">${escapeHtml(p.name)}</h4>
             <p class="text-sm text-gray-600 mb-2">${escapeHtml(p.description || '')}</p>

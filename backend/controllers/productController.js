@@ -98,19 +98,34 @@ async function postReview(req, res, next) {
     customer_name = (customer_name || '').toString().trim().slice(0, 100) || null;
     review = (review || '').toString().trim().slice(0, 1000) || null;
 
-    const [productRows] = await pool.query('SELECT id FROM products WHERE id = ?', [id]);
-    if (!productRows.length) {
-      const err = new Error('Product not found');
-      err.status = 404;
+    let connection;
+    try {
+      connection = await pool.getConnection();
+    } catch (dbErr) {
+      const err = new Error('Database connection failed. Please try again later.');
+      err.status = 503;
       throw err;
     }
 
-    await pool.query(
-      'INSERT INTO product_reviews (product_id, customer_name, rating, review) VALUES (?, ?, ?, ?)',
-      [id, customer_name, rating, review]
-    );
+    try {
+      const [productRows] = await connection.query('SELECT id FROM products WHERE id = ?', [id]);
+      if (!productRows.length) {
+        const err = new Error('Product not found');
+        err.status = 404;
+        throw err;
+      }
 
-    res.status(201).json({ success: true, message: 'Review submitted' });
+      await connection.query(
+        'INSERT INTO product_reviews (product_id, customer_name, rating, review) VALUES (?, ?, ?, ?)',
+        [id, customer_name, rating, review]
+      );
+
+      res.status(201).json({ success: true, message: 'Review submitted' });
+    } catch (err) {
+      next(err);
+    } finally {
+      if (connection) connection.release();
+    }
   } catch (err) {
     next(err);
   }
